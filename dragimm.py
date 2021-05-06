@@ -25,13 +25,23 @@ def get_filter(force, drag):
     # doesn't matter.
     return lambda: DragFilter(force, drag, np.copy(m0), np.copy(S0))
 
-# TODO: Estimate "force and drag" from data!
+# Median matched to speeds
 filters = {
     'still': get_filter(0.5, 1.0),
     'walking': get_filter(2.0, 0.6),
     'cycling': get_filter(3.0, 0.06),
     'driving': get_filter(3.5, 0.008),
 }
+
+# Just some stetson-harrisons
+"""
+filters = {
+    'still': get_filter(0.5, 1.0),
+    'walking': get_filter(2.0, 0.5),
+    'cycling': get_filter(3.0, 0.3),
+    'driving': get_filter(3.5, 0.3),
+}
+"""
 
 filter_idx = {k: i for i, k in enumerate(filters)}
 

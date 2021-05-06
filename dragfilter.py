@@ -158,19 +158,19 @@ class DragFilter:
         # IMM needs the likelihood of the previous sample. This is
         # mostly computed in update below again, but optimize later
         
-        #predicted_z = self.H@self.x
-        #z_cov = self.H@self.P@self.H.T + R
-        #residual = z - predicted_z
+        predicted_z = self.H@self.x
+        z_cov = self.H@self.P@self.H.T + R
+        residual = z - predicted_z
         
         #print(residual)
-        #self.likelihood = np.exp(mvnormlogpdf(residual, 0.0, z_cov))
-        #self.likelihood = max(self.likelihood, float_eps)
+        self.likelihood = np.exp(mvnormlogpdf(residual, 0.0, z_cov))
+        self.likelihood = max(self.likelihood, float_eps)
         
         # TODO: Using this likelihood gives a different result than
         # the residual likelihood. Don't know the implications yet!
         self.x, self.P, y, K, S, loglik = update(self.x, self.P, z, R, self.H)
-        self.likelihood = np.exp(loglik)
-        self.likelihood = max(self.likelihood, float_eps)
+        #self.likelihood = np.exp(loglik)
+        #self.likelihood = max(self.likelihood, float_eps)
 
 def filter_trajectory(traj):
     # TODO: Do smoothing!
