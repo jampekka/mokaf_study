@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.linalg import expm
 import numba
 from numba import njit
 
@@ -93,18 +92,7 @@ def predict(dt, m, S, Fd, Qd):
 
 # Adapted from filterpy
 from numpy import dot
-def update(x, P, z, R, H=None, return_all=False):
-    if z is None:
-        if return_all:
-            return x, P, None, None, None, None
-        return x, P
-
-    if H is None:
-        H = np.array([1])
-
-    if np.isscalar(H):
-        H = np.array([H])
-
+def update(x, P, z, R, H):
     Hx = np.atleast_1d(dot(H, x))
     #z = reshape_z(z, Hx.shape[0], x.ndim)
 
@@ -125,18 +113,14 @@ def update(x, P, z, R, H=None, return_all=False):
     # P = (I-KH)P(I-KH)' + KRK'
     KH = dot(K, H)
 
-    try:
-        I_KH = np.eye(KH.shape[0]) - KH
-    except:
-        I_KH = np.array([1 - KH])
+    I_KH = np.eye(KH.shape[0]) - KH
     P = dot(dot(I_KH, P), I_KH.T) + dot(dot(K, R), K.T)
 
 
-    if return_all:
-        # compute log likelihood
-        log_likelihood = mvnormlogpdf(z, dot(H, x), S)
-        return x, P, y, K, S, log_likelihood
-    return x, P
+    # compute log likelihood
+    log_likelihood = mvnormlogpdf(z, dot(H, x), S)
+    return x, P, y, K, S, log_likelihood
+    #return x, P
 
 
 class DragFilter:
@@ -189,7 +173,7 @@ class DragFilter:
         
         # TODO: Using this likelihood gives a different result than
         # the residual likelihood. Don't know the implications yet!
-        self.x, self.P, y, K, S, loglik = update(self.x, self.P, z, R, self.H, return_all=True)
+        self.x, self.P, y, K, S, loglik = update(self.x, self.P, z, R, self.H)
         self.likelihood = np.exp(loglik)
         self.likelihood = max(self.likelihood, float_eps)
 
