@@ -2,9 +2,25 @@ import numpy as np
 import matplotlib.pyplot as plt
 from filterpy.kalman import update
 from scipy.linalg import expm
-from filterpy.stats import logpdf as mvnormlogpdf
 import numba
 from numba import njit
+
+# http://gregorygundersen.com/blog/2019/10/30/scipy-multivariate/
+@njit(cache=True)
+def mvnormlogpdf(x, mean, cov):
+    # `eigh` assumes the matrix is Hermitian.
+    vals, vecs = np.linalg.eigh(cov)
+    logdet     = np.sum(np.log(vals))
+    valsinv    = np.array([1./v for v in vals])
+    # `vecs` is R times D while `vals` is a R-vector where R is the matrix 
+    # rank. The asterisk performs element-wise multiplication.
+    U          = vecs * np.sqrt(valsinv)
+    rank       = len(vals)
+    dev        = x - mean
+    # "maha" for "Mahalanobis distance".
+    maha       = np.square(np.dot(dev, U)).sum()
+    log2pi     = np.log(2 * np.pi)
+    return -0.5 * (rank * log2pi + maha + logdet)
 
 force = 2.0
 drag = 0.01
@@ -50,20 +66,20 @@ H = np.array([
 float_eps = np.finfo(float).eps
 
 # Sympy generated mess for solving the "Qd" for the Fc and Q above
-@njit
+@njit(cache=True)
 def Qd(dt, force, drag):
     exp = np.exp
     return np.array([[dt*force/drag**2 - 3*force/(2*drag**3) + 2*force*exp(-drag*dt)/drag**3 - force*exp(-2*drag*dt)/(2*drag**3), 0, force*(exp(2*drag*dt) - 2*exp(drag*dt) + 1)*exp(-2*drag*dt)/(2*drag**2), 0], [0, dt*force/drag**2 - 3*force/(2*drag**3) + 2*force*exp(-drag*dt)/drag**3 - force*exp(-2*drag*dt)/(2*drag**3), 0, force*(exp(2*drag*dt) - 2*exp(drag*dt) + 1)*exp(-2*drag*dt)/(2*drag**2)], [force*(exp(2*drag*dt) - 2*exp(drag*dt) + 1)*exp(-2*drag*dt)/(2*drag**2), 0, force/(2*drag) - force*exp(-2*drag*dt)/(2*drag), 0], [0, force*(exp(2*drag*dt) - 2*exp(drag*dt) + 1)*exp(-2*drag*dt)/(2*drag**2), 0, force/(2*drag) - force*exp(-2*drag*dt)/(2*drag)]])
 
 # Sympy generated mess for solving expm(F*dt) for this case
-@njit
+@njit(cache=True)
 def Fd(dt, force, drag):
     # See https://en.wikipedia.org/wiki/Discretization#Discretization_of_linear_state_space_models
     exp = np.exp
     Ft = np.array([[1, 0, 1/drag - exp(-drag*dt)/drag, 0], [0, 1, 0, 1/drag - exp(-drag*dt)/drag], [0, 0, exp(-drag*dt), 0], [0, 0, 0, exp(-drag*dt)]])
     return Ft
 
-@njit
+@njit(cache=True)
 def predict(dt, m, S, Fd, Qd):
     m = Fd@m
     
@@ -120,7 +136,7 @@ class DragFilter:
         z_cov = self.H@self.P@self.H.T + R
         residual = z - predicted_z
         
-        self.likelihood = np.exp(mvnormlogpdf(x=residual, cov=z_cov))
+        self.likelihood = np.exp(mvnormlogpdf(residual, 0.0, z_cov))
         self.likelihood = max(self.likelihood, float_eps)
         self.x, self.P = update(self.x, self.P, z, R, self.H)
 
