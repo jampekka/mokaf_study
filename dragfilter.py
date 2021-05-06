@@ -90,10 +90,11 @@ def predict(dt, m, S, Fd, Qd):
     
     return m, S
 
-# Adapted from filterpy
 from numpy import dot
+# Adapted from filterpy
+@njit
 def update(x, P, z, R, H):
-    Hx = np.atleast_1d(dot(H, x))
+    Hx = dot(H, x)
     #z = reshape_z(z, Hx.shape[0], x.ndim)
 
     # error (residual) between measurement and prediction
@@ -139,8 +140,8 @@ class DragFilter:
         # speeds and bearings are just estimated from the samples. Measurement variance
         # is given in the measurements, so no need to assume values for that.
         self.H = np.array([
-            [1, 0, 0, 0,],
-            [0, 1, 0, 0,]
+            [1.0, 0, 0, 0,],
+            [0, 1.0, 0, 0,]
         ])
 
         self.likelihood = 1.0
