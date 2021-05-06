@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from filterpy.kalman import update
 from scipy.linalg import expm
 from filterpy.stats import logpdf as mvnormlogpdf
+import numba
+from numba import njit
 
 force = 2.0
 drag = 0.01
@@ -48,22 +50,21 @@ H = np.array([
 float_eps = np.finfo(float).eps
 
 # Sympy generated mess for solving the "Qd" for the Fc and Q above
+@njit
 def Qd(dt, force, drag):
     exp = np.exp
     return np.array([[dt*force/drag**2 - 3*force/(2*drag**3) + 2*force*exp(-drag*dt)/drag**3 - force*exp(-2*drag*dt)/(2*drag**3), 0, force*(exp(2*drag*dt) - 2*exp(drag*dt) + 1)*exp(-2*drag*dt)/(2*drag**2), 0], [0, dt*force/drag**2 - 3*force/(2*drag**3) + 2*force*exp(-drag*dt)/drag**3 - force*exp(-2*drag*dt)/(2*drag**3), 0, force*(exp(2*drag*dt) - 2*exp(drag*dt) + 1)*exp(-2*drag*dt)/(2*drag**2)], [force*(exp(2*drag*dt) - 2*exp(drag*dt) + 1)*exp(-2*drag*dt)/(2*drag**2), 0, force/(2*drag) - force*exp(-2*drag*dt)/(2*drag), 0], [0, force*(exp(2*drag*dt) - 2*exp(drag*dt) + 1)*exp(-2*drag*dt)/(2*drag**2), 0, force/(2*drag) - force*exp(-2*drag*dt)/(2*drag)]])
 
+# Sympy generated mess for solving expm(F*dt) for this case
+@njit
 def Fd(dt, force, drag):
-    # TODO: Optimize later. Probably not necessary to take expms here, but
-    # don't know if it's any slower than an explicit solution. But we can't use
-    # a Python implementation in production anyway
     # See https://en.wikipedia.org/wiki/Discretization#Discretization_of_linear_state_space_models
     exp = np.exp
     Ft = np.array([[1, 0, 1/drag - exp(-drag*dt)/drag, 0], [0, 1, 0, 1/drag - exp(-drag*dt)/drag], [0, 0, exp(-drag*dt), 0], [0, 0, 0, exp(-drag*dt)]])
     return Ft
 
+@njit
 def predict(dt, m, S, Fd, Qd):
-    
-    #expFT = expm(F*dt)
     m = Fd@m
     
     # See https://sci-hub.st/https://www.sciencedirect.com/science/article/pii/S0076539206800767
@@ -83,12 +84,7 @@ class DragFilter:
         self.drag = drag
         self.x = x
         self.P = P
-        self.F = np.array([
-            [0.0,   0.0,    1.0,    0.0],
-            [0.0,   0.0,    0.0,    1.0],
-            [0.0,   0.0,    -drag, 0.0],
-            [0.0,   0.0,    0.0, -drag],
-        ])
+
 
         # TODO: The measurement model doesn't currently use speed or bearing.
         # Need to derive the speed distributions (or approximations) from these, should
