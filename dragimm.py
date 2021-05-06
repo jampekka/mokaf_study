@@ -45,7 +45,6 @@ mean_state_duration = 10*60
 # and same transition probability
 transition_rate = np.zeros((N_states, N_states)) + (1/mean_state_duration)/(N_states - 1)
 transition_rate[np.diag_indices(N_states)] = -1/mean_state_duration
-import numba
 
 def filter_trajectory(traj):
     # TODO: Smoothing!
