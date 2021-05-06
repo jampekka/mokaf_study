@@ -146,12 +146,6 @@ class DragFilter:
 
         self.likelihood = 1.0
 
-        # Stored here so we can revert if Q overflows. Try to find
-        # a cleaner solution.
-        self.x0 = np.copy(x)
-        self.P0 = np.copy(P)
-
-
     def predict(self, dt):
         # Hack to avoid over/underflows: cap "effective" dt to 300 seconds
         dt = min(dt, 300)

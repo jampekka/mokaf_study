@@ -28,9 +28,9 @@ def get_filter(force, drag):
 # TODO: Estimate "force and drag" from data!
 filters = {
     'still': get_filter(0.5, 1.0),
-    'walking': get_filter(2.0, 0.5),
-    'cycling': get_filter(3.0, 0.3),
-    'driving': get_filter(3.5, 0.3),
+    'walking': get_filter(2.0, 0.6),
+    'cycling': get_filter(3.0, 0.06),
+    'driving': get_filter(3.5, 0.008),
 }
 
 filter_idx = {k: i for i, k in enumerate(filters)}
@@ -144,6 +144,6 @@ def filter_trajectory(traj):
         most_likely_path.append(most_likely_state)
     
     most_likely_path = most_likely_path[::-1][1:]
-    return np.array(ms), np.array(Ss), state_probs, most_likely_path
+    return np.array(ms), np.array(Ss), state_probs, most_likely_path, imm.total_loglikelihood
 
 
