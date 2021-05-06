@@ -52,20 +52,26 @@ def Qd(dt, force, drag):
     exp = np.exp
     return np.array([[dt*force/drag**2 - 3*force/(2*drag**3) + 2*force*exp(-drag*dt)/drag**3 - force*exp(-2*drag*dt)/(2*drag**3), 0, force*(exp(2*drag*dt) - 2*exp(drag*dt) + 1)*exp(-2*drag*dt)/(2*drag**2), 0], [0, dt*force/drag**2 - 3*force/(2*drag**3) + 2*force*exp(-drag*dt)/drag**3 - force*exp(-2*drag*dt)/(2*drag**3), 0, force*(exp(2*drag*dt) - 2*exp(drag*dt) + 1)*exp(-2*drag*dt)/(2*drag**2)], [force*(exp(2*drag*dt) - 2*exp(drag*dt) + 1)*exp(-2*drag*dt)/(2*drag**2), 0, force/(2*drag) - force*exp(-2*drag*dt)/(2*drag), 0], [0, force*(exp(2*drag*dt) - 2*exp(drag*dt) + 1)*exp(-2*drag*dt)/(2*drag**2), 0, force/(2*drag) - force*exp(-2*drag*dt)/(2*drag)]])
 
-def predict(dt, m, S, F, Qd):
+def Fd(dt, force, drag):
     # TODO: Optimize later. Probably not necessary to take expms here, but
     # don't know if it's any slower than an explicit solution. But we can't use
     # a Python implementation in production anyway
     # See https://en.wikipedia.org/wiki/Discretization#Discretization_of_linear_state_space_models
-    expFT = expm(F*dt)
-    m = expFT@m
+    exp = np.exp
+    Ft = np.array([[1, 0, 1/drag - exp(-drag*dt)/drag, 0], [0, 1, 0, 1/drag - exp(-drag*dt)/drag], [0, 0, exp(-drag*dt), 0], [0, 0, 0, exp(-drag*dt)]])
+    return Ft
+
+def predict(dt, m, S, Fd, Qd):
+    
+    #expFT = expm(F*dt)
+    m = Fd@m
     
     # See https://sci-hub.st/https://www.sciencedirect.com/science/article/pii/S0076539206800767
     # for solving the differential lypuanov equation that governs the covariance matrix.
     # No general analytical solution is known, but it's relatively simple to solve for
     # special cases. Here Qt should be the integral part of the known solution for a time-invariant
     # F.
-    S = expFT@S@expFT.T + Qd
+    S = Fd@S@Fd.T + Qd
     
     return m, S
 
@@ -106,7 +112,8 @@ class DragFilter:
         # Hack to avoid over/underflows: cap "effective" dt to 300 seconds
         dt = min(dt, 300)
         Q = Qd(dt, self.force, self.drag)
-        self.x, self.P = predict(dt, self.x, self.P, self.F, Q)
+        F = Fd(dt, self.force, self.drag)
+        self.x, self.P = predict(dt, self.x, self.P, F, Q)
 
     def update(self, z, R):
         # Just a standard Kalman update with varying R
