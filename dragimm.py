@@ -49,7 +49,7 @@ N_states = len(filters)
 
 # Just a rough guess of how long a "leg" lasts on average to
 # compute the transition rate matrix.
-mean_state_duration = 10*60
+mean_state_duration = 5*60
 
 # A rough transition rate matrix assuming same mean duration
 # and same transition probability
