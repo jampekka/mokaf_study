@@ -154,6 +154,9 @@ def filter_trajectory(traj):
         most_likely_path.append(most_likely_state)
     
     most_likely_path = most_likely_path[::-1][1:]
+
+    # TODO FIXME: Temporary hack as the viterbi is a bit buggy ATM
+    most_likely_path = np.argmax(state_probs, axis=1)
     return np.array(ms), np.array(Ss), state_probs, most_likely_path, imm.total_loglikelihood
 
 
