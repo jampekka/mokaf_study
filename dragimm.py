@@ -129,8 +129,12 @@ def filter_trajectory(traj):
         # could to this in a lot more pricinpled manner using Rayleigh-distribution,
         # but probably doesn't matter much here. So just double the "in_vehicle"
         # class prob est if this would be an "outlier"
+        VEHICLE_GIS_PROB_FACTOR = 2
         if z.vehicle_way_distance < 2*z.location_std:
-            state_prob_ests[-1] *= 2
+            state_prob_ests[-1] *= VEHICLE_GIS_PROB_FACTOR
+        else:
+            state_prob_ests[-1] /= VEHICLE_GIS_PROB_FACTOR
+        
         state_prob_ests /= np.sum(state_prob_ests)
         
         # TODO: Try to get the M into the prediction step. Mostly because
