@@ -165,8 +165,6 @@ def filter_trajectory(traj):
     # TODO FIXME: Hack to do "most likely path decoding" with IMM state probs. Theoretically HIDEOUS!
     # TODO FIXME: Known to cause problems that time-variant transition probs will fix easily!
     HACK_FIXED_DT_TRANSITIONS = expm(transition_rate*5)
-    print(initial_state_probs)
-    print(HACK_FIXED_DT_TRANSITIONS)
     most_likely_path = viterbi(initial_state_probs, HACK_FIXED_DT_TRANSITIONS, state_probs)
     most_likely_path = np.array(most_likely_path)
     
