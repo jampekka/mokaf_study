@@ -116,13 +116,23 @@ def filter_trajectory(traj):
         # TODO: Could really use the full prediction probability vector
         # here!!
         # TODO: Is there more succint way of computing the full prob vector like this?
+
+        state_prob_ests = np.ones(N_states)
         if z.atype is not None:
             mode_state_prob = z.aconf
             leftover_prob = (1 - mode_state_prob)/(N_states - 1)
-            state_prob_ests = np.zeros(N_states) + leftover_prob
+            state_prob_ests *= np.zeros(N_states) + leftover_prob
             state_prob_ests[filter_idx[z.atype]] = mode_state_prob
-        else:
-            state_prob_ests = None
+
+        # Compute "GIS" probability of being on a vehicle way.
+        # TODO! MEGASUPER HACKY 🤢!! We have nice distribution assupmptions and
+        # could to this in a lot more pricinpled manner using Rayleigh-distribution,
+        # but probably doesn't matter much here. So just double the "in_vehicle"
+        # class prob est if this would be an "outlier"
+        if z.vehicle_way_distance < 2*z.location_std:
+            state_prob_ests[-1] *= 2
+        state_prob_ests /= np.sum(state_prob_ests)
+        
         # TODO: Try to get the M into the prediction step. Mostly because
         # it feels wrong here.
         imm.update(measurement, R, M, state_prob_ests=state_prob_ests)
